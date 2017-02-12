@@ -1,5 +1,1 @@
-JavaAdvanced.iml
-test2
-ncfskjdncskjdnck
-dscscsdc
-sdcdsd
+resources/test.txt
