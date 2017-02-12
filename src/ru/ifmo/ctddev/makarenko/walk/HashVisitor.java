@@ -1,7 +1,10 @@
 package ru.ifmo.ctddev.makarenko.walk;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 public class HashVisitor implements FileVisitor<Path> {

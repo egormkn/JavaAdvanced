@@ -25,10 +25,11 @@ public class Walk {
             while ((s = reader.readLine()) != null) {
                 Path path = Paths.get(s);
                 if (Files.isDirectory(path)) {
-                    writer.append(Utils.defaultHash).append(' ').append(s).append(System.lineSeparator());
+                    writer.append(Utils.defaultHash);
                 } else {
-                    writer.append(Utils.hash(path)).append(' ').append(s).append(System.lineSeparator());
+                    writer.append(Utils.hash(path));
                 }
+                writer.append(' ').append(s).append(System.lineSeparator());
             }
         } catch (NoSuchFileException e) {
             System.out.println("Input file '" + inputFile + "' does not exists");
