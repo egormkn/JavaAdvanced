@@ -18,13 +18,13 @@ public class HashVisitor implements FileVisitor<Path> {
 
     @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        writer.append(Walk.hash(file)).append(' ').append(file.toString()).append(System.lineSeparator());
+        writer.append(Utils.hash(file)).append(' ').append(file.toString()).append(System.lineSeparator());
         return FileVisitResult.CONTINUE;
     }
 
     @Override
     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-        writer.append("00000000").append(' ').append(file.toString()).append(System.lineSeparator());
+        writer.append(Utils.defaultHash).append(' ').append(file.toString()).append(System.lineSeparator());
         return FileVisitResult.CONTINUE;
     }
 

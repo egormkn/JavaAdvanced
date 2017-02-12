@@ -22,7 +22,7 @@ public class RecursiveWalk {
                 if (Files.isDirectory(path)) {
                     Files.walkFileTree(path, new HashVisitor(writer));
                 } else {
-                    writer.append(Walk.hash(path)).append(' ').append(s).append(System.lineSeparator());
+                    writer.append(Utils.hash(path)).append(' ').append(s).append(System.lineSeparator());
                 }
             }
         } catch (NoSuchFileException e) {
@@ -32,5 +32,7 @@ public class RecursiveWalk {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        System.out.flush();
+        System.err.flush();
     }
 }
