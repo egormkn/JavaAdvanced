@@ -9,27 +9,30 @@ import java.nio.file.Path;
 
 public final class Utils {
 
-    public static final String defaultHash = "00000000";
+    public static final String DEFAULT_HASH = "00000000";
+
+    public static final int INITIAL_HASH = 0x811c9dc5;
+    public static final int PRIME_NUMBER = 0x01000193;
 
     public static String hash(Path path) {
-        assert !Files.isDirectory(path);
-        String hash = defaultHash;
+        // assert !Files.isDirectory(path);
+        String hash = DEFAULT_HASH;
         try (BufferedInputStream stream = new BufferedInputStream(Files.newInputStream(path))) {
             byte[] buffer = new byte[1024];
             int bytesRead;
-            int h = 0x811c9dc5;
+            int h = INITIAL_HASH;
             while((bytesRead = stream.read(buffer)) != -1){
                 for (int i = 0; i < bytesRead; i++) {
-                    h = (h * 0x01000193) ^ (buffer[i] & 0xff);
+                    h = (h * PRIME_NUMBER) ^ (buffer[i] & 0xff);
                 }
             }
             hash = String.format("%08x", h);
         } catch (NoSuchFileException e) {
-            System.out.println("File '" + path + "' not found");
+            System.err.println("File '" + path + "' not found");
         } catch (AccessDeniedException e) {
-            System.out.println("File '" + path + "' is protected");
+            System.err.println("File '" + path + "' security violation");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("I/O error for '" + path + "':" + e.getMessage());
         }
         return hash;
     }
