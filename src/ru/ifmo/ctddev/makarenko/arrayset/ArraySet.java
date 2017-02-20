@@ -8,28 +8,15 @@ import java.util.*;
  * Unmodifiable Sorted Set
  *
  * @param <T> the type of elements maintained by this set
- * @see ArrayList
  * @see SortedSet
  * @see NavigableSet
- * @see TreeSet
  */
 
-public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
+public class ArraySet<T extends Comparable<T>> extends AbstractSet<T> implements NavigableSet<T> {
 
     private final List<T> items;
     private final Comparator<? super T> comparator;
     private NavigableSet<T> descending = null;
-
-    public static void main(String[] args) {
-        Random random = new Random();
-        List<String> list = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            list.add("Test" + random.nextInt(10));
-        }
-
-        ArraySet<String> set = new ArraySet<>(list);
-        System.out.println(set);
-    }
 
     public ArraySet() {
         this(Collections.emptyList(), null);
@@ -44,6 +31,11 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         TreeSet<T> treeSet = new TreeSet<>(comparator);
         treeSet.addAll(data);
         items = Collections.unmodifiableList(new ArrayList<>(treeSet));
+    }
+
+    private ArraySet(@NotNull List<T> sortedList, @Nullable Comparator<? super T> cmp, boolean sorted) {
+        comparator = cmp;
+        items = sortedList;
     }
 
     @Override
@@ -67,8 +59,8 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         return items.size();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
         return Collections.binarySearch(items, (T) o, comparator) >= 0;
     }
@@ -106,6 +98,19 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     @Override
     public T pollLast() {
         throw new UnsupportedOperationException("ArraySet is immutable");
+    }
+
+    @Override
+    public NavigableSet<T> descendingSet() {
+        if (descending == null) {
+            descending = new ArraySet<>(items, Collections.reverseOrder(comparator));
+        }
+        return descending;
+    }
+
+    @Override
+    public Iterator<T> descendingIterator() {
+        return descendingSet().iterator();
     }
 
     /**
@@ -148,48 +153,77 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
         return index < items.size() ? items.get(index) : null;
     }
 
-
-    @Override
-    public NavigableSet<T> descendingSet() {
-        if (descending == null) {
-            descending = new ArraySet<>(items, Collections.reverseOrder(comparator));
-        }
-        return descending;
-    }
-
-    @Override
-    public Iterator<T> descendingIterator() {
-        return descendingSet().iterator();
-    }
-
-    // TODO
+    /**
+     * Returns a view of the portion of this set whose elements range from
+     * {@code fromElement} to {@code toElement}.  If {@code fromElement} and
+     * {@code toElement} are equal, the returned set is empty unless {@code
+     * fromInclusive} and {@code toInclusive} are both true.  The returned set
+     * is backed by this set, so changes in the returned set are reflected in
+     * this set, and vice-versa.  The returned set supports all optional set
+     * operations that this set supports.
+     *
+     * <p>The returned set will throw an {@code IllegalArgumentException}
+     * on an attempt to insert an element outside its range.
+     *
+     * @param fromElement low endpoint of the returned set
+     * @param fromInclusive {@code true} if the low endpoint
+     *        is to be included in the returned view
+     * @param toElement high endpoint of the returned set
+     * @param toInclusive {@code true} if the high endpoint
+     *        is to be included in the returned view
+     * @return a view of the portion of this set whose elements range from
+     *         {@code fromElement}, inclusive, to {@code toElement}, exclusive
+     * @throws ClassCastException if {@code fromElement} and
+     *         {@code toElement} cannot be compared to one another using this
+     *         set's comparator (or, if the set has no comparator, using
+     *         natural ordering).  Implementations may, but are not required
+     *         to, throw this exception if {@code fromElement} or
+     *         {@code toElement} cannot be compared to elements currently in
+     *         the set.
+     * @throws NullPointerException if {@code fromElement} or
+     *         {@code toElement} is null and this set does
+     *         not permit null elements
+     * @throws IllegalArgumentException if {@code fromElement} is
+     *         greater than {@code toElement}; or if this set itself
+     *         has a restricted range, and {@code fromElement} or
+     *         {@code toElement} lies outside the bounds of the range.
+     */
     @Override
     public NavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-        int fromI = greaterThan(fromElement, fromInclusive);
-        int toI = lessThan(toElement, toInclusive) + 1;
-        if (toI + 1 == fromI) {
-            toI = fromI;
-        }
-        return new ArraySet<>(items.subList(fromI, toI), comparator);
+        int l = greaterThan(fromElement, fromInclusive);
+        int r = lessThan(toElement, toInclusive) + 1;
+        return new ArraySet<>(items.subList(l, r < l ? l : r), comparator, true);
     }
 
     @Override
     public NavigableSet<T> headSet(T toElement, boolean inclusive) {
-        return new ArraySet<>(items.subList(0, lessThan(toElement, inclusive) + 1), comparator);
+        return new ArraySet<>(items.subList(0, lessThan(toElement, inclusive) + 1), comparator, true);
     }
 
     @Override
     public NavigableSet<T> tailSet(T fromElement, boolean inclusive) {
-        return new ArraySet<>(items.subList(greaterThan(fromElement, inclusive), items.size()), comparator);
+        return new ArraySet<>(items.subList(greaterThan(fromElement, inclusive), items.size()), comparator, true);
     }
 
+    /**
+     * @return The index of the least element in this set
+     *         greater than (or equal) to the given element
+     */
     private int greaterThan(T element, boolean orEqual) {
         int index = Collections.binarySearch(items, element, comparator);
-        return index < 0 ? ~index : !orEqual ? ++index : index;
+        return index < 0
+                ? ~index // Insertion point: the index of first element greater than the key
+                : orEqual ? index : index + 1;
     }
 
+    /**
+     * @return The index of the greatest element in this set
+     *         less than (or equal) to the given element
+     */
     private int lessThan(T element, boolean orEqual) {
         int index = Collections.binarySearch(items, element, comparator);
-        return index < 0 ? ~index - 1 : !orEqual ? --index : index;
+        return index < 0
+                ? ~index - 1 // The index of last element less than the key
+                : orEqual ? index : index - 1;
     }
 }
