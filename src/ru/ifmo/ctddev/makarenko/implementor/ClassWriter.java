@@ -3,14 +3,15 @@ package ru.ifmo.ctddev.makarenko.implementor;
 import com.sun.istack.internal.NotNull;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.TreeMap;
 
 import static ru.ifmo.ctddev.makarenko.implementor.Implementor.IMPL_SUFFIX;
 
 /**
  * @see javax.sql.rowset.CachedRowSet
+ * @see javax.management.ImmutableDescriptor
  */
 
 public class ClassWriter {
@@ -18,10 +19,12 @@ public class ClassWriter {
     private static final String LINE = System.lineSeparator();
     private static final String TAB = "    ";
 
+    private final TreeMap<String, Method> methods;
     private final Appendable output;
 
     public ClassWriter(Appendable output) {
         this.output = output;
+        this.methods = new TreeMap<>();
     }
 
     @NotNull
@@ -118,43 +121,32 @@ public class ClassWriter {
         }
         for (Constructor constructor : token.getConstructors()) {
             output.append(TAB).append(toGenericString(constructor)).append(" {").append(LINE);
-            output.append(TAB).append(TAB).append("super").append(getArguments(constructor, true)).append(";").append(LINE);
+            output.append(TAB).append(TAB).append("super").append(getArguments(constructor, true)).append(';').append(LINE);
             output.append(TAB).append("}").append(LINE).append(LINE);
         }
     }
 
-    private String toGenericString(Constructor constructor) {
-        StringBuilder sb = new StringBuilder();
-
-
-        int mod = constructor.getModifiers() & Modifier.constructorModifiers() & ~Modifier.ABSTRACT;
-        if (mod != 0) {
-            sb.append(Modifier.toString(mod)).append(' ');
-        }
-
-        sb.append(constructor.getDeclaringClass().getSimpleName()).append(IMPL_SUFFIX);
-        sb.append(getTypeParameters(constructor.getTypeParameters(), true));
-
-        sb.append(getArguments(constructor, false));
-
-        Type[] exceptions = constructor.getGenericExceptionTypes();
-        if (exceptions.length > 0) {
-            sb.append(" throws ");
-            for (int k = 0; k < exceptions.length; k++) {
-                sb.append((exceptions[k] instanceof Class)?
-                        ((Class)exceptions[k]).getName():
-                        exceptions[k].toString());
-                if (k < (exceptions.length - 1))
-                    sb.append(',');
-            }
-        }
-        return sb.toString();
-    }
-
     private void printMethods(Class<?> token) throws IOException {
         for (Method method : token.getMethods()) {
+            String name = method.getName() + getArguments(method, false);
+            Method other = methods.get(name);
+            if (other == null) {
+                methods.put(name, method);
+            } else {
+                Class<?> old = other.getReturnType();
+                Class<?> newType = method.getReturnType();
+                if (old.isAssignableFrom(newType)) {
+                    methods.put(name, method);
+                }
+            }
+        }
+
+        for (Method method : methods.values()) {
             if (Modifier.isFinal(method.getModifiers())) {
                 continue;
+            }
+            for (Annotation annotation : method.getAnnotations()) {
+                output.append(TAB).append(annotation.toString()).append(LINE);
             }
             output.append(TAB).append(toGenericString(method));
 
@@ -222,6 +214,33 @@ public class ClassWriter {
             for (int k = 0; k < exceptions.length; k++) {
                 sb.append((exceptions[k] instanceof Class) ?
                         ((Class) exceptions[k]).getName() :
+                        exceptions[k].toString());
+                if (k < (exceptions.length - 1))
+                    sb.append(',');
+            }
+        }
+        return sb.toString();
+    }
+
+    private String toGenericString(Constructor constructor) {
+        StringBuilder sb = new StringBuilder();
+
+        int mod = constructor.getModifiers() & Modifier.constructorModifiers() & ~Modifier.ABSTRACT;
+        if (mod != 0) {
+            sb.append(Modifier.toString(mod)).append(' ');
+        }
+
+        sb.append(constructor.getDeclaringClass().getSimpleName()).append(IMPL_SUFFIX);
+        sb.append(getTypeParameters(constructor.getTypeParameters(), true));
+
+        sb.append(getArguments(constructor, false));
+
+        Type[] exceptions = constructor.getGenericExceptionTypes();
+        if (exceptions.length > 0) {
+            sb.append(" throws ");
+            for (int k = 0; k < exceptions.length; k++) {
+                sb.append((exceptions[k] instanceof Class)?
+                        ((Class)exceptions[k]).getName():
                         exceptions[k].toString());
                 if (k < (exceptions.length - 1))
                     sb.append(',');

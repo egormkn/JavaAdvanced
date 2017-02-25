@@ -24,7 +24,7 @@ public class Implementor implements Impler {
             System.err.println("Usage: java Implementor <classname>");
             return;
         }
-        debug = true;
+        //debug = true;
         try {
             Class c = Class.forName(args[0]);
             new Implementor().implement(c, Paths.get("./test00_default"));
