@@ -1,7 +1,5 @@
 package ru.ifmo.ctddev.makarenko.implementor;
 
-import com.sun.istack.internal.NotNull;
-
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
@@ -9,25 +7,19 @@ import java.util.TreeMap;
 
 import static ru.ifmo.ctddev.makarenko.implementor.Implementor.IMPL_SUFFIX;
 
-/**
- * @see javax.sql.rowset.CachedRowSet
- * @see javax.management.ImmutableDescriptor
- */
-
 public class ClassWriter {
 
     private static final String LINE = System.lineSeparator();
     private static final String TAB = "    ";
 
-    private final TreeMap<String, Method> methods;
     private final Appendable output;
+    private final TreeMap<String, Method> methods;
 
     public ClassWriter(Appendable output) {
         this.output = output;
         this.methods = new TreeMap<>();
     }
 
-    @NotNull
     private String getDefaultValue(String type) {
         switch (type) {
             case "void":
@@ -100,7 +92,7 @@ public class ClassWriter {
         }
         Package pack = token.getPackage();
         if (pack != null) {
-            output.append("package ").append(pack.getName()).append(";");
+            output.append("package ").append(pack.getName()).append(';');
             output.append(LINE).append(LINE);
         }
         output.append(toGenericString(token));
@@ -126,23 +118,54 @@ public class ClassWriter {
         }
     }
 
-    private void printMethods(Class<?> token) throws IOException {
-        for (Method method : token.getMethods()) {
-            String name = method.getName() + getArguments(method, false);
-            Method other = methods.get(name);
-            if (other == null) {
+    private void addMethod(Method method) {
+        if (Modifier.isPrivate(method.getModifiers())) {
+            return;
+        }
+        if (Modifier.isFinal(method.getModifiers())) {
+            return;
+        }
+        String name = method.getName() + getArguments(method, false);
+
+        Method other = methods.get(name);
+        if (other == null) {
+            methods.put(name, method);
+        } else {
+            Class<?> old = other.getReturnType();
+            Class<?> newType = method.getReturnType();
+            if (old.isAssignableFrom(newType)) {
                 methods.put(name, method);
-            } else {
-                Class<?> old = other.getReturnType();
-                Class<?> newType = method.getReturnType();
-                if (old.isAssignableFrom(newType)) {
-                    methods.put(name, method);
-                }
             }
         }
+    }
+
+    private void addParentMethods(Class<?> token) {
+        for (Method method : token.getDeclaredMethods()) {
+            if (Modifier.isPublic(method.getModifiers())) {
+                continue; // Was added in getMethods()
+            }
+            if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
+                addMethod(method);
+            }
+        }
+        Class<?> superClass = token.getSuperclass();
+        if (superClass != null
+                && Modifier.isAbstract(token.getModifiers())
+                && Modifier.isAbstract(superClass.getModifiers())) {
+            addParentMethods(superClass);
+        }
+    }
+
+    private void printMethods(Class<?> token) throws IOException {
+        for (Method method : token.getMethods()) {
+            if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
+                addMethod(method);
+            }
+        }
+        addParentMethods(token);
 
         for (Method method : methods.values()) {
-            if (Modifier.isFinal(method.getModifiers())) {
+            if (!Modifier.isAbstract(method.getModifiers()) && !token.isInterface()) {
                 continue;
             }
             for (Annotation annotation : method.getAnnotations()) {
@@ -164,6 +187,12 @@ public class ClassWriter {
             }
             output.append(LINE).append(LINE);
         }
+
+        /*if (token.getSuperclass() != null) {
+            printMethods(token.getSuperclass());
+        }*/
+
+
     }
 
     private String toGenericString(Class<?> c) {
@@ -239,8 +268,8 @@ public class ClassWriter {
         if (exceptions.length > 0) {
             sb.append(" throws ");
             for (int k = 0; k < exceptions.length; k++) {
-                sb.append((exceptions[k] instanceof Class)?
-                        ((Class)exceptions[k]).getName():
+                sb.append((exceptions[k] instanceof Class) ?
+                        ((Class) exceptions[k]).getName() :
                         exceptions[k].toString());
                 if (k < (exceptions.length - 1))
                     sb.append(',');

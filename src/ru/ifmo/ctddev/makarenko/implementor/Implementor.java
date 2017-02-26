@@ -6,10 +6,12 @@ import info.kgeorgiy.java.advanced.implementor.ImplerException;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 public class Implementor implements Impler {
 
@@ -24,7 +26,9 @@ public class Implementor implements Impler {
             System.err.println("Usage: java Implementor <classname>");
             return;
         }
-        //debug = true;
+
+        debug = true;
+
         try {
             Class c = Class.forName(args[0]);
             new Implementor().implement(c, Paths.get("./test00_default"));
@@ -45,6 +49,12 @@ public class Implementor implements Impler {
             throw new ImplerException("Unsupported token type: array");
         } else if (Modifier.isFinal(token.getModifiers())) {
             throw new ImplerException("Token is final");
+        }
+
+        Constructor[] constructors = token.getDeclaredConstructors();
+        if (constructors.length > 0
+                && Stream.of(constructors).filter(c -> !Modifier.isPrivate(c.getModifiers())).count() == 0) {
+            throw new ImplerException("There is no public/protected constructors");
         }
 
         Package pack = token.getPackage();
