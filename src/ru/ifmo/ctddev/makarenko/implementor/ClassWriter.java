@@ -168,6 +168,12 @@ public class ClassWriter {
             if (!Modifier.isAbstract(method.getModifiers()) && !token.isInterface()) {
                 continue;
             }
+            if (method.isDefault()) {
+                continue;
+            }
+            if (Modifier.isStatic(method.getModifiers())) {
+                continue;
+            }
             for (Annotation annotation : method.getAnnotations()) {
                 output.append(TAB).append(annotation.toString()).append(LINE);
             }
@@ -187,12 +193,6 @@ public class ClassWriter {
             }
             output.append(LINE).append(LINE);
         }
-
-        /*if (token.getSuperclass() != null) {
-            printMethods(token.getSuperclass());
-        }*/
-
-
     }
 
     private String toGenericString(Class<?> c) {
@@ -217,21 +217,9 @@ public class ClassWriter {
             sb.append(Modifier.toString(mod)).append(' ');
         }
 
-        TypeVariable<?>[] typeparms = method.getTypeParameters();
-        if (typeparms.length > 0) {
-            boolean first = true;
-            sb.append('<');
-            for (TypeVariable<?> typeparm : typeparms) {
-                if (!first)
-                    sb.append(',');
-                // Class objects can't occur here; no need to test
-                // and call Class.getName().
-                sb.append(typeparm.toString());
-                first = false;
-            }
-            sb.append("> ");
-        }
 
+        sb.append(getTypeParameters(method.getTypeParameters(), true));
+        sb.append(' ');
         Type genRetType = method.getGenericReturnType();
         sb.append(genRetType.getTypeName()).append(' ');
         sb.append(method.getName());
