@@ -12,7 +12,7 @@ import java.util.*;
  * @see NavigableSet
  */
 
-public class ArraySet<T extends Comparable<T>> extends AbstractSet<T> implements NavigableSet<T> {
+public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
 
     private final List<T> items;
     private final Comparator<? super T> comparator;

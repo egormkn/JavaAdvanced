@@ -1,5 +1,5 @@
 package ru.ifmo.ctddev.makarenko.implementor;
-
+/*
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 
@@ -11,6 +11,8 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Enumeration;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class Implementor implements Impler {
@@ -49,11 +51,13 @@ public class Implementor implements Impler {
             throw new ImplerException("Unsupported token type: array");
         } else if (Modifier.isFinal(token.getModifiers())) {
             throw new ImplerException("Token is final");
+        } else if (token.isEnum() || token.equals(Enum.class)) {
+            throw new ImplerException("Token is enum");
         }
 
         Constructor[] constructors = token.getDeclaredConstructors();
-        if (constructors.length > 0
-                && Stream.of(constructors).filter(c -> !Modifier.isPrivate(c.getModifiers())).count() == 0) {
+        Predicate<Constructor> notPrivate = c -> !Modifier.isPrivate(c.getModifiers());
+        if (constructors.length > 0 && Stream.of(constructors).filter(notPrivate).count() == 0) {
             throw new ImplerException("There is no public/protected constructors");
         }
 
@@ -61,6 +65,7 @@ public class Implementor implements Impler {
         if (pack != null) {
             path = path.resolve(pack.getName().replace(PACKAGE_SEPARATOR, File.separator));
         }
+
         String filename = token.getSimpleName() + IMPL_SUFFIX + IMPL_EXTENSION;
 
         try (BufferedWriter writer = Files.newBufferedWriter(Files.createDirectories(path).resolve(filename))) {
@@ -70,3 +75,4 @@ public class Implementor implements Impler {
         }
     }
 }
+*/
