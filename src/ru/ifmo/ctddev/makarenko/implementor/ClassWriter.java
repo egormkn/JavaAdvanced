@@ -2,7 +2,6 @@ package ru.ifmo.ctddev.makarenko.implementor;
 
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import ru.ifmo.ctddev.makarenko.arrayset.ArraySet;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;

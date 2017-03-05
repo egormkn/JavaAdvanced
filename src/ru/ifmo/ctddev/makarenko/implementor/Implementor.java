@@ -11,7 +11,9 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
@@ -37,13 +39,11 @@ public class Implementor implements JarImpler {
             return;
         }
 
-        Implementor implementor = new Implementor();
-
         try {
             if (args.length == 3) {
-                implementor.implementJar(Class.forName(args[1]), Paths.get(args[2]));
+                new Implementor().implementJar(Class.forName(args[1]), Paths.get(args[2]));
             } else {
-                implementor.implement(Class.forName(args[0]), Paths.get(TEMP_DIR));
+                new Implementor().implement(Class.forName(args[0]), Paths.get(TEMP_DIR));
             }
         } catch (ClassNotFoundException e) {
             System.err.println("Class/interface not found: " + e.getMessage());
@@ -71,20 +71,20 @@ public class Implementor implements JarImpler {
         Attributes attrs = manifest.getMainAttributes();
         attrs.put(Attributes.Name.MANIFEST_VERSION, "1.0");
         attrs.put(Attributes.Name.MAIN_CLASS, token.getName() + IMPL_SUFFIX);
+        attrs.put(new Attributes.Name("Created-By"), this.getClass().getPackage().getName());
 
         try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
             implementSrc(token, temp);
-            compileFiles(temp, Collections.singletonList(source.toString()));
+            compileFiles(Collections.singletonList(source.toString()), temp);
 
-            String fileName = impl.getFileName().toString();
-
-            String packageName = "";
+            String entryName = impl.getFileName().toString();
             Package pack = token.getPackage();
             if (pack != null) {
-                packageName = token.getPackage().getName().replace(PACKAGE_SEPARATOR, ZIP_ENTRY_SEPARATOR) + ZIP_ENTRY_SEPARATOR;
+                entryName = token.getPackage().getName().replace(PACKAGE_SEPARATOR, ZIP_ENTRY_SEPARATOR)
+                        + ZIP_ENTRY_SEPARATOR + entryName;
             }
 
-            JarEntry entry = new JarEntry(packageName + fileName);
+            JarEntry entry = new JarEntry(entryName);
             out.putNextEntry(entry);
 
             try (InputStream is = new BufferedInputStream(Files.newInputStream(impl))) {
@@ -142,7 +142,7 @@ public class Implementor implements JarImpler {
         return token.getSimpleName() + IMPL_SUFFIX + CLASS_EXTENSION;
     }
 
-    private void compileFiles(final Path root, final List<String> files) throws IOException {
+    public static void compileFiles(final List<String> files, final Path root) throws IOException {
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
             throw new IOException("Could not find java compiler, include tools.jar to classpath");
