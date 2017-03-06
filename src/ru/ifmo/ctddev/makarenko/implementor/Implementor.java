@@ -98,11 +98,11 @@ public class Implementor implements JarImpler {
         } catch (IOException e) {
             throw new ImplerException(e);
         } finally {
-            try {
+            /*try {
                 Files.deleteIfExists(source);
                 Files.deleteIfExists(impl);
                 Files.deleteIfExists(temp);
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {}*/
         }
     }
 

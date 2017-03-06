@@ -1,6 +1,8 @@
 Manifest-Version: 1.0
-Created-By: Egor Makarenko
-Class-Path: JarImplementorTest.jar hamcrest-core-1.3.jar junit-4.11.ja
- r quickcheck-0.6.jar
 Main-Class: ru.ifmo.ctddev.makarenko.implementor.Implementor
+Created-By: Egor Makarenko
+Class-Path: .\tests\artifacts\JarImplementorTest.jar 
+ .\tests\lib\hamcrest-core-1.3.jar 
+ .\tests\lib\junit-4.11.jar 
+ .\tests\lib\quickcheck-0.6.jar
 
