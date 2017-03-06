@@ -11,12 +11,16 @@ import java.util.*;
 import static ru.ifmo.ctddev.makarenko.implementor.Implementor.IMPL_SUFFIX;
 
 /**
- * Writes class implementation to {@link ClassWriter#output}
+ * Writes class or interface implementation to {@link #output}
+ *
+ * @author Egor Makarenko
+ * @version 1.1
  */
+
 public class ClassWriter {
 
     /**
-     * Default line separator
+     * System line separator
      */
     private static final String LINE = System.lineSeparator();
 
@@ -26,33 +30,35 @@ public class ClassWriter {
     private static final String TAB = "    ";
 
     /**
-     * Output stream
+     * {@link Appendable} output stream
+     *
+     * @see #print(Class)
      */
     private final Appendable output;
 
     /**
      * Map of methods that should be implemented
+     *
+     * @see #printMethods(Class, TypeVariable[])
      */
     private final Map<String, Method> methods;
 
-    /**
-     * Map of generic types
-     */
-    private final Map<Type, Type> generics;
+    // private final Map<Type, Type> generics;
 
     /**
-     * Public constructor
+     * Public constructor that sets the output stream
      *
-     * @param output Output stream
+     * @param output {@link Appendable} output stream
      */
     public ClassWriter(@NotNull Appendable output) {
         this.output = output;
         this.methods = new TreeMap<>();
-        this.generics = new HashMap<>();
+        // this.generics = new HashMap<>();
     }
 
     /**
-     * Get default value by type token
+     * Get string representing default type value
+     *
      * @param type type token
      * @return default type value as stated in
      *         <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
@@ -80,7 +86,7 @@ public class ClassWriter {
     }
 
     /**
-     * Get modifiers by mask
+     * Get string representing all modifiers except <tt>abstract</tt>
      *
      * @param modifiers bit mask
      * @return string of modifiers except <tt>abstract</tt>
@@ -179,7 +185,7 @@ public class ClassWriter {
         for (int j = 0; j < params.length; j++) {
             String param = params[j].getTypeName();
             if (exec.isVarArgs() && (j == params.length - 1)) {
-                param = param.replaceFirst("\\[\\]$", "..."); // replace T[] with T...
+                param = param.replaceFirst("\\[]$", "..."); // replace T[] with T...
             }
 
             if (!onlyNames) sb.append(param);
@@ -296,7 +302,7 @@ public class ClassWriter {
      * @param types generic types
      * @throws IOException when something goes wrong during the output
      */
-    private void printMethods(Class<?> token, TypeVariable<? extends Class<?>>[] types) throws IOException {
+    private void printMethods(Class<?> token, @SuppressWarnings("unused") TypeVariable<? extends Class<?>>[] types) throws IOException {
         for (Method method : token.getMethods()) {
             if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
                 addMethod(method);

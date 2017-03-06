@@ -243,7 +243,7 @@ public class Implementor implements JarImpler {
 
     /**
      * Compiles java files to classes. Generated <tt>*.class</tt>
-     * files should be placed to the <tt>root</tt> directory
+     * files will be placed to the <tt>root</tt> directory
      *
      * @param files {@link List} of files that should be compiled
      * @param root directory to store compiled <tt>*.class</tt> files
