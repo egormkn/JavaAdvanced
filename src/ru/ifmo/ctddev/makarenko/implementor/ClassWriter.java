@@ -10,21 +10,55 @@ import java.util.*;
 
 import static ru.ifmo.ctddev.makarenko.implementor.Implementor.IMPL_SUFFIX;
 
+/**
+ * Writes class implementation to {@link ClassWriter#output}
+ */
 public class ClassWriter {
 
+    /**
+     * Default line separator
+     */
     private static final String LINE = System.lineSeparator();
+
+    /**
+     * Tab string
+     */
     private static final String TAB = "    ";
 
+    /**
+     * Output stream
+     */
     private final Appendable output;
+
+    /**
+     * Map of methods that should be implemented
+     */
     private final Map<String, Method> methods;
+
+    /**
+     * Map of generic types
+     */
     private final Map<Type, Type> generics;
 
+    /**
+     * Public constructor
+     *
+     * @param output Output stream
+     */
     public ClassWriter(@NotNull Appendable output) {
         this.output = output;
         this.methods = new TreeMap<>();
         this.generics = new HashMap<>();
     }
 
+    /**
+     * Get default value by type token
+     * @param type type token
+     * @return default type value as stated in
+     *         <a href="https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html">
+     *              documentation
+     *         </a>
+     */
     private String getDefaultValue(@NotNull Class<?> type) {
         if (type.equals(void.class)) {
             return "";
@@ -45,15 +79,35 @@ public class ClassWriter {
         }
     }
 
+    /**
+     * Get modifiers by mask
+     *
+     * @param modifiers bit mask
+     * @return string of modifiers except <tt>abstract</tt>
+     */
     private String getModifiers(int modifiers) {
         modifiers &= ~Modifier.ABSTRACT;
         return modifiers == 0 ? "" : Modifier.toString(modifiers);
     }
 
+    /**
+     * Get exceptions string
+     *
+     * @param exceptions array of exceptions types
+     * @return string of exception types separated by comma
+     * @see ClassWriter#getExceptions(Type[], Map)
+     */
     private String getExceptions(@NotNull Type[] exceptions) {
         return getExceptions(exceptions, null);
     }
 
+    /**
+     * Get generic exceptions string
+     *
+     * @param exceptions array of exceptions types
+     * @param generics map of generic types that should be replaced
+     * @return string of exception types separated by comma
+     */
     private String getExceptions(@NotNull Type[] exceptions, @Nullable Map<Type, Type> generics) {
         if (exceptions.length == 0) {
             return "";
@@ -81,6 +135,13 @@ public class ClassWriter {
         return sb.toString();
     }
 
+    /**
+     * Get type parameters string
+     *
+     * @param types array of {@link TypeVariable} representing generic types
+     * @param withBounds whether lower and upper bounds should be included
+     * @return string of type parameters
+     */
     private String getTypeParameters(TypeVariable<?>[] types, boolean withBounds) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < types.length; i++) {
@@ -105,6 +166,13 @@ public class ClassWriter {
         return sb.toString();
     }
 
+    /**
+     * Get {@link Executable} arguments
+     *
+     * @param exec executable
+     * @param onlyNames whether argument types should be included
+     * @return string of {@link Executable} arguments
+     */
     private String getArguments(Executable exec, boolean onlyNames) {
         StringBuilder sb = new StringBuilder("(");
         Type[] params = exec.getGenericParameterTypes();
@@ -125,6 +193,11 @@ public class ClassWriter {
         return sb.toString();
     }
 
+    /**
+     * Prints class or interface implementation to the {@link ClassWriter#output}
+     * @param token type token of class to be implemented
+     * @throws IOException when something goes wrong during the output
+     */
     public void print(Class<?> token) throws IOException {
         if (token == null) {
             return;
@@ -150,6 +223,12 @@ public class ClassWriter {
         }*/
     }
 
+    /**
+     * Print constructors of class implementation to the {@link ClassWriter#output}
+     *
+     * @param token type token
+     * @throws IOException when something goes wrong during the output
+     */
     private void printConstructors(Class<?> token) throws IOException {
         if (token == null) {
             return;
@@ -162,6 +241,11 @@ public class ClassWriter {
         }
     }
 
+    /**
+     * Add method to {@link ClassWriter#methods} map
+     *
+     * @param method method to add
+     */
     private void addMethod(Method method) {
         if (Modifier.isPrivate(method.getModifiers())) {
             return;
@@ -183,6 +267,11 @@ public class ClassWriter {
         }
     }
 
+    /**
+     * Recursively add to {@link ClassWriter#methods} parent methods that should be implemented
+     *
+     * @param token type token
+     */
     private void addParentMethods(Class<?> token) {
         for (Method method : token.getDeclaredMethods()) {
             if (Modifier.isPublic(method.getModifiers())) {
@@ -200,6 +289,13 @@ public class ClassWriter {
         }
     }
 
+    /**
+     * Print methods of class implementation to the {@link ClassWriter#output}
+     *
+     * @param token type token
+     * @param types generic types
+     * @throws IOException when something goes wrong during the output
+     */
     private void printMethods(Class<?> token, TypeVariable<? extends Class<?>>[] types) throws IOException {
         for (Method method : token.getMethods()) {
             if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
@@ -236,6 +332,12 @@ public class ClassWriter {
         }
     }
 
+    /**
+     * Get string of class declaration by type token
+     *
+     * @param c type token
+     * @return string of class declaration
+     */
     private String toGenericString(Class<?> c) {
         return getModifiers(c.getModifiers() & Modifier.classModifiers()) + ' ' +
                 " class " +
@@ -244,6 +346,12 @@ public class ClassWriter {
                 getTypeParameters(c.getTypeParameters(), true);
     }
 
+    /**
+     * Get string of method declaration
+     *
+     * @param method method
+     * @return string of method declaration
+     */
     private String toGenericString(Method method) {
         return getModifiers(method.getModifiers() & Modifier.methodModifiers()) + ' ' +
                 getTypeParameters(method.getTypeParameters(), true) + ' ' +
@@ -253,6 +361,12 @@ public class ClassWriter {
                 getExceptions(method.getGenericExceptionTypes());
     }
 
+    /**
+     * Get string of constructor declaration
+     *
+     * @param constructor constructor
+     * @return string of constructor declaration
+     */
     private String toGenericString(Constructor constructor) {
         return getModifiers(constructor.getModifiers() & Modifier.constructorModifiers()) + ' ' +
                 constructor.getDeclaringClass().getSimpleName() + IMPL_SUFFIX +
