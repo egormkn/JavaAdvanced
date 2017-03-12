@@ -39,11 +39,17 @@ public class ClassWriter {
     /**
      * Map of methods that should be implemented
      *
-     * @see #printMethods(Class, TypeVariable[])
+     * @see #printMethods(Class)
      */
     private final Map<String, Method> methods;
 
-    // private final Map<Type, Type> generics;
+
+    /**
+     * Set of methods that cannot be reimplemented
+     *
+     * @see #printMethods(Class)
+     */
+    private final Set<String> finalMethods;
 
     /**
      * Public constructor that sets the output stream
@@ -53,7 +59,7 @@ public class ClassWriter {
     public ClassWriter(@NotNull Appendable output) {
         this.output = output;
         this.methods = new TreeMap<>();
-        // this.generics = new HashMap<>();
+        this.finalMethods = new HashSet<>();
     }
 
     /**
@@ -153,7 +159,6 @@ public class ClassWriter {
         for (int i = 0; i < types.length; i++) {
             sb.append(i == 0 ? '<' : ", ");
             sb.append(types[i].getTypeName());
-            // generics.add(types[i]);
             Type[] bounds = types[i].getBounds();
             if (withBounds && (bounds.length != 1 || !bounds[0].getTypeName().equals(Object.class.getTypeName()))) {
                 for (int j = 0; j < bounds.length; j++) {
@@ -201,6 +206,7 @@ public class ClassWriter {
 
     /**
      * Prints class or interface implementation to the {@link ClassWriter#output}
+     *
      * @param token type token of class to be implemented
      * @throws IOException when something goes wrong during the output
      */
@@ -220,13 +226,9 @@ public class ClassWriter {
         output.append(" {").append(LINE).append(LINE);
 
         printConstructors(token);
-        printMethods(token, token.getTypeParameters());
+        printMethods(token);
 
         output.append("}").append(LINE);
-
-        /*for (Type t : generics) {
-            System.err.println(t.getTypeName());
-        }*/
     }
 
     /**
@@ -251,15 +253,33 @@ public class ClassWriter {
      * Add method to {@link ClassWriter#methods} map
      *
      * @param method method to add
+     * @param token type token
      */
-    private void addMethod(Method method) {
+    private void addMethod(Method method, Class<?> token) {
+        String name = method.getName() + getArguments(method, false);
+
         if (Modifier.isPrivate(method.getModifiers())) {
             return;
         }
-        if (Modifier.isFinal(method.getModifiers())) {
+        if (finalMethods.contains(name)) {
             return;
         }
-        String name = method.getName() + getArguments(method, false);
+        if (Modifier.isFinal(method.getModifiers())) {
+            finalMethods.add(name);
+            return;
+        }
+        if (method.isDefault()) {
+            finalMethods.add(name);
+            return;
+        }
+        if (Modifier.isStatic(method.getModifiers())) {
+            finalMethods.add(name);
+            return;
+        }
+        if (Modifier.isAbstract(token.getModifiers()) && !Modifier.isAbstract(method.getModifiers())) {
+            finalMethods.add(name);
+            return;
+        }
 
         Method other = methods.get(name);
         if (other == null) {
@@ -267,7 +287,7 @@ public class ClassWriter {
         } else {
             Class<?> old = other.getReturnType();
             Class<?> newType = method.getReturnType();
-            if (old.isAssignableFrom(newType)) {
+            if (old.isAssignableFrom(newType) && !old.equals(newType)) {
                 methods.put(name, method);
             }
         }
@@ -279,19 +299,25 @@ public class ClassWriter {
      * @param token type token
      */
     private void addParentMethods(Class<?> token) {
-        for (Method method : token.getDeclaredMethods()) {
-            if (Modifier.isPublic(method.getModifiers())) {
-                continue; // Was added in getMethods()
-            }
-            if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
-                addMethod(method);
-            }
+        if (!token.isInterface() && !Modifier.isAbstract(token.getModifiers())) {
+            return;
         }
+
+        for (Method method : token.getDeclaredMethods()) {
+            addMethod(method, token);
+        }
+
         Class<?> superClass = token.getSuperclass();
-        if (superClass != null
-                && Modifier.isAbstract(token.getModifiers())
-                && Modifier.isAbstract(superClass.getModifiers())) {
+        if (superClass != null && Modifier.isAbstract(superClass.getModifiers())) {
             addParentMethods(superClass);
+        }
+
+        for (Class<?> superInterface : token.getInterfaces()) {
+            addParentMethods(superInterface);
+        }
+
+        if (token.isAnnotation()) {
+            addParentMethods(Annotation.class);
         }
     }
 
@@ -299,24 +325,12 @@ public class ClassWriter {
      * Print methods of class implementation to the {@link ClassWriter#output}
      *
      * @param token type token
-     * @param types generic types
      * @throws IOException when something goes wrong during the output
      */
-    private void printMethods(Class<?> token, @SuppressWarnings("unused") TypeVariable<? extends Class<?>>[] types) throws IOException {
-        for (Method method : token.getMethods()) {
-            if (token.isInterface() || Modifier.isAbstract(method.getModifiers())) {
-                addMethod(method);
-            }
-        }
+    private void printMethods(Class<?> token) throws IOException {
         addParentMethods(token);
 
         for (Method method : methods.values()) {
-            if (method.isDefault()) {
-                continue;
-            }
-            if (Modifier.isStatic(method.getModifiers())) {
-                continue;
-            }
             for (Annotation annotation : method.getAnnotations()) {
                 output.append(TAB).append(annotation.toString()).append(LINE);
             }
