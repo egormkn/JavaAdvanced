@@ -22,7 +22,9 @@ import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
 /**
- * Generates implementation of class or interface.
+ * Generates implementation of class or interface. Creates java source file
+ * with Impl suffix that extends or implements desired class/interface.
+ * Optionally compiles it and bundles to *.jar file
  *
  * @author Egor Makarenko
  * @version 1.1
@@ -167,11 +169,14 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Produces code implementing class or interface specified by provided <tt>token</tt>.
+     * Produces code implementing class or interface specified by
+     * provided <tt>token</tt>.
      * <p>
-     * Generated class full name should be same as full name of the type token with <tt>{@value #IMPL_SUFFIX}</tt> suffix
-     * added. Generated source code should be placed in the <tt>root</tt> directory and have correct file name. For example, the implementation of the
-     * interface {@link java.util.List} should go to <tt>$root/ListImpl.java</tt>
+     * Generated class full name should be same as full name of the type token
+     * with <tt>{@value #IMPL_SUFFIX}</tt> suffix added. Generated source code
+     * should be placed in the <tt>root</tt> directory and have correct file name.
+     * For example, the implementation of the interface {@link java.util.List}
+     * should go to <tt>$root/ListImpl.java</tt>
      * </p>
      *
      * @param token type token to create implementation for

@@ -1,2 +1,0 @@
-#!/bin/sh
-java -Xmx20M -cp "tests/lib/hamcrest-core-1.3.jar;tests/lib/junit-4.11.jar;tests/lib/quickcheck-0.6.jar;tests/artifacts/JarImplementorTest.jar;./out/production/JavaAdvanced" info.kgeorgiy.java.advanced.implementor.Tester %1 ru.ifmo.ctddev.makarenko.implementor.Implementor %2 %3
