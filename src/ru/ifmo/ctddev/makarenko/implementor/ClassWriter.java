@@ -11,7 +11,9 @@ import java.util.*;
 import static ru.ifmo.ctddev.makarenko.implementor.Implementor.IMPL_SUFFIX;
 
 /**
- * Writes class or interface implementation to {@link #output}
+ * Writes class or interface implementation to {@link #output}.
+ * All methods return their default values, all constructors call
+ * super class constructors.
  *
  * @author Egor Makarenko
  * @version 1.1
@@ -30,7 +32,8 @@ public class ClassWriter {
     private static final String TAB = "    ";
 
     /**
-     * {@link Appendable} output stream
+     * {@link Appendable} output stream, where the implementation source
+     * will be printed
      *
      * @see #print(Class)
      */
@@ -63,7 +66,7 @@ public class ClassWriter {
     }
 
     /**
-     * Get string representing default type value
+     * Get string representing default type value of type token
      *
      * @param type type token
      * @return default type value as stated in
@@ -103,7 +106,8 @@ public class ClassWriter {
     }
 
     /**
-     * Get exceptions string
+     * Get exceptions string, that can be used in method declaration.
+     *
      *
      * @param exceptions array of exceptions types
      * @return string of exception types separated by comma
@@ -114,7 +118,8 @@ public class ClassWriter {
     }
 
     /**
-     * Get generic exceptions string
+     * Get generic exceptions string, that can be used in method declaration.
+     * Generic type names will be changed using map of types
      *
      * @param exceptions array of exceptions types
      * @param generics map of generic types that should be replaced
@@ -148,7 +153,9 @@ public class ClassWriter {
     }
 
     /**
-     * Get type parameters string
+     * Get type parameters string from {@link TypeVariable} array.
+     * If <tt>withBounds</tt> flag is set, string will also contain
+     * upper and lower bounds of generic type.
      *
      * @param types array of {@link TypeVariable} representing generic types
      * @param withBounds whether lower and upper bounds should be included
@@ -178,7 +185,8 @@ public class ClassWriter {
     }
 
     /**
-     * Get {@link Executable} arguments
+     * Get {@link Executable} arguments. Arguments will have
+     * names <tt>arg0</tt>, <tt>arg1</tt> etc.
      *
      * @param exec executable
      * @param onlyNames whether argument types should be included
@@ -205,7 +213,10 @@ public class ClassWriter {
     }
 
     /**
-     * Prints class or interface implementation to the {@link ClassWriter#output}
+     * Prints class or interface implementation to the {@link ClassWriter#output}.
+     * Implementation will have {@value ru.ifmo.ctddev.makarenko.implementor.Implementor#IMPL_SUFFIX} suffix.
+     * All methods that must be implemented  will return their default values.
+     * Non-private constructors will call super class constructors with same arguments.
      *
      * @param token type token of class to be implemented
      * @throws IOException when something goes wrong during the output
