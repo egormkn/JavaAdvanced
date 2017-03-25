@@ -7,7 +7,6 @@
       <excludeFolder url="file://$MODULE_DIR$/src/META-INF" />
       <excludeFolder url="file://$MODULE_DIR$/src/ru/ifmo/ctddev/makarenko/arrayset" />
       <excludeFolder url="file://$MODULE_DIR$/src/ru/ifmo/ctddev/makarenko/implementor" />
-      <excludeFolder url="file://$MODULE_DIR$/src/ru/ifmo/ctddev/makarenko/walk" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
@@ -15,5 +14,7 @@
     <orderEntry type="library" name="junit-4.11" level="project" />
     <orderEntry type="library" name="quickcheck-0.6" level="project" />
     <orderEntry type="library" name="IterativeParallelismTest" level="project" />
+    <orderEntry type="library" name="ArraySetTest" level="project" />
+    <orderEntry type="library" name="ParallelMapperTest" level="project" />
   </component>
 </module>
