@@ -2,10 +2,7 @@ package ru.ifmo.ctddev.makarenko.walk;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
+import java.nio.file.*;
 
 public final class Utils {
 
@@ -15,13 +12,13 @@ public final class Utils {
     public static final int PRIME_NUMBER = 0x01000193;
 
     public static String hash(Path path) {
-        // assert !Files.isDirectory(path);
+        assert !Files.isDirectory(path);
         String hash = DEFAULT_HASH;
         try (BufferedInputStream stream = new BufferedInputStream(Files.newInputStream(path))) {
             byte[] buffer = new byte[1024];
             int bytesRead;
             int h = INITIAL_HASH;
-            while((bytesRead = stream.read(buffer)) != -1){
+            while ((bytesRead = stream.read(buffer)) != -1) {
                 for (int i = 0; i < bytesRead; i++) {
                     h = (h * PRIME_NUMBER) ^ (buffer[i] & 0xff);
                 }
@@ -37,5 +34,16 @@ public final class Utils {
         return hash;
     }
 
-    private Utils() {}
+    public static Path getPath(String s) {
+        Path path;
+        try {
+            path = Paths.get(s);
+        } catch (Exception e) {
+            path = null;
+        }
+        return path;
+    }
+
+    private Utils() {
+    }
 }

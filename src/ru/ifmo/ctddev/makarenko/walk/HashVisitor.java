@@ -2,15 +2,17 @@ package ru.ifmo.ctddev.makarenko.walk;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
 public class HashVisitor extends SimpleFileVisitor<Path> {
-    private final BufferedWriter writer;
 
-    public HashVisitor(BufferedWriter writer) {
+    private final Writer writer;
+
+    public HashVisitor(Writer writer) {
         this.writer = writer;
     }
 
