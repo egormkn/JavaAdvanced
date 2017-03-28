@@ -1,6 +1,7 @@
-package ru.ifmo.ctddev.makarenko.concurrent;
+package ru.ifmo.ctddev.makarenko.mapper;
 
 import info.kgeorgiy.java.advanced.concurrent.ListIP;
+import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
 import java.util.function.Function;
@@ -16,6 +17,26 @@ import static java.lang.Math.min;
  * @author Egor Makarenko
  */
 public class IterativeParallelism implements ListIP {
+
+    private final ParallelMapper mapper;
+
+    /**
+     * Create an instance of {@link IterativeParallelism}
+     * that generates threads for parallel list processing.
+     */
+    public IterativeParallelism() {
+        this(null);
+    }
+
+    /**
+     * Create an instance of {@link IterativeParallelism}
+     * that uses {@link ParallelMapper} for parallel list processing.
+     *
+     * @param mapper ParallelMapper to use
+     */
+    public IterativeParallelism(ParallelMapper mapper) {
+        this.mapper = mapper;
+    }
 
     /**
      * Returns the maximum element of {@link List} according to
@@ -152,18 +173,24 @@ public class IterativeParallelism implements ListIP {
             subLists.add(list.subList(start, end));
         }
 
-        List<R> result = new ArrayList<>(Collections.nCopies(subLists.size(), null));
-        List<Thread> pool = new ArrayList<>(threads);
-        for (int i = 0; i < subLists.size(); i++) {
-            final int position = i;
-            Thread t = new Thread(
-                    () -> result.set(position, threadJob.apply(subLists.get(position)))
-            );
-            t.start();
-            pool.add(t);
-        }
-        for (Thread t : pool) {
-            t.join();
+        List<R> result;
+
+        if (mapper == null) {
+            result = new ArrayList<>(Collections.nCopies(subLists.size(), null));
+            List<Thread> pool = new ArrayList<>(threads);
+            for (int i = 0; i < subLists.size(); i++) {
+                final int position = i;
+                Thread t = new Thread(
+                        () -> result.set(position, threadJob.apply(subLists.get(position)))
+                );
+                t.start();
+                pool.add(t);
+            }
+            for (Thread t : pool) {
+                t.join();
+            }
+        } else {
+            result = mapper.map(threadJob, subLists);
         }
 
         return finalJob.apply(result);
