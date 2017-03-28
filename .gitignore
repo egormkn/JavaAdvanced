@@ -2,12 +2,7 @@
 .idea/*
 out/*
 .idea_modules/*
-*.iml
 *.ipr
-modules.xml
-
-### Java ###
-*.class
 
 # Package Files #
 *.jar
