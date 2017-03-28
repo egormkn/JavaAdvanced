@@ -2,12 +2,10 @@
  * A tool for implementing classes and interfaces.
  * <p>
  * Usage:
- * <br>
- * <code>java -jar Implementor.jar &lt;classname&gt;</code>
- * <br>
- * or
- * <br>
- * <code>java -jar Implementor.jar -jar &lt;classname&gt; &lt;file.jar&gt;</code>
+ * <ul>
+ * <li>java -jar Implementor.jar &lt;classname&gt;</li>
+ * <li>java -jar Implementor.jar -jar &lt;classname&gt; &lt;file.jar&gt;</li>
+ * </ul>
  * </p>
  *
  * @version 1.0

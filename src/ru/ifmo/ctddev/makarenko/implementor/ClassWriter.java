@@ -108,7 +108,6 @@ public class ClassWriter {
     /**
      * Get exceptions string, that can be used in method declaration.
      *
-     *
      * @param exceptions array of exceptions types
      * @return string of exception types separated by comma
      * @see ClassWriter#getExceptions(Type[], Map)
@@ -213,14 +212,15 @@ public class ClassWriter {
     }
 
     /**
-     * Prints class or interface implementation to the {@link ClassWriter#output}.
-     * Implementation will have {@value ru.ifmo.ctddev.makarenko.implementor.Implementor#IMPL_SUFFIX} suffix.
+     * Prints class or interface implementation to the {@link #output}.
+     * Implementation will have {@value Implementor#IMPL_SUFFIX} suffix.
      * All methods that must be implemented  will return their default values.
      * Non-private constructors will call super class constructors with same arguments.
      *
      * @param token type token of class to be implemented
      * @throws IOException when something goes wrong during the output
      */
+    @SuppressWarnings("WeakerAccess")
     public void print(Class<?> token) throws IOException {
         if (token == null) {
             return;
@@ -243,7 +243,8 @@ public class ClassWriter {
     }
 
     /**
-     * Print constructors of class implementation to the {@link ClassWriter#output}
+     * Print constructors of class implementation to the {@link #output}
+     * All constructors call super class constructor with same arguments
      *
      * @param token type token
      * @throws IOException when something goes wrong during the output
@@ -261,7 +262,7 @@ public class ClassWriter {
     }
 
     /**
-     * Add method to {@link ClassWriter#methods} map
+     * Add method to {@link #methods} map
      *
      * @param method method to add
      * @param token type token
@@ -305,7 +306,8 @@ public class ClassWriter {
     }
 
     /**
-     * Recursively add to {@link ClassWriter#methods} parent methods that should be implemented
+     * Recursively add to {@link ClassWriter#methods} parent methods that
+     * should be implemented.
      *
      * @param token type token
      */
@@ -333,7 +335,7 @@ public class ClassWriter {
     }
 
     /**
-     * Print methods of class implementation to the {@link ClassWriter#output}
+     * Print methods of class implementation to the {@link #output}
      *
      * @param token type token
      * @throws IOException when something goes wrong during the output
@@ -366,7 +368,7 @@ public class ClassWriter {
     /**
      * Get string of class declaration by type token
      *
-     * @param c type token
+     * @param c type token of class to declare
      * @return string of class declaration
      */
     private String toGenericString(Class<?> c) {
@@ -380,7 +382,7 @@ public class ClassWriter {
     /**
      * Get string of method declaration
      *
-     * @param method method
+     * @param method method to declare
      * @return string of method declaration
      */
     private String toGenericString(Method method) {
@@ -395,7 +397,7 @@ public class ClassWriter {
     /**
      * Get string of constructor declaration
      *
-     * @param constructor constructor
+     * @param constructor constructor to declare
      * @return string of constructor declaration
      */
     private String toGenericString(Constructor constructor) {
