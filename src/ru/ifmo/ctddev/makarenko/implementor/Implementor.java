@@ -216,7 +216,7 @@ public class Implementor implements JarImpler {
      * of class implementation.
      * <p>
      * Source file name should be same as full name of
-     * the type token with <tt>{@value #IMPL_SUFFIX}.java</tt> added.
+     * the type token with <tt>Impl.java</tt> added.
      * For example, source file name for interface {@link java.util.List}
      * should be <tt>ListImpl.java</tt>
      * </p>
@@ -234,7 +234,7 @@ public class Implementor implements JarImpler {
      * of class implementation.
      * <p>
      * Class file name should be same as full name of the type token
-     * with <tt>{@value #IMPL_SUFFIX}.class</tt> added.
+     * with <tt>Impl.class</tt> added.
      * For example, source file name for interface {@link java.util.List}
      * should be <tt>ListImpl.java</tt>
      * </p>
