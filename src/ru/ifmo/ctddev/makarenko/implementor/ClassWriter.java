@@ -1,8 +1,5 @@
 package ru.ifmo.ctddev.makarenko.implementor;
 
-import com.sun.istack.internal.NotNull;
-import com.sun.istack.internal.Nullable;
-
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
@@ -59,7 +56,7 @@ public class ClassWriter {
      *
      * @param output {@link Appendable} output stream
      */
-    public ClassWriter(@NotNull Appendable output) {
+    public ClassWriter(Appendable output) {
         this.output = output;
         this.methods = new TreeMap<>();
         this.finalMethods = new HashSet<>();
@@ -74,7 +71,7 @@ public class ClassWriter {
      *              documentation
      *         </a>
      */
-    private String getDefaultValue(@NotNull Class<?> type) {
+    private String getDefaultValue(Class<?> type) {
         if (type.equals(void.class)) {
             return "";
         } else if (type.equals(byte.class) || type.equals(short.class) || type.equals(int.class)) {
@@ -112,7 +109,7 @@ public class ClassWriter {
      * @return string of exception types separated by comma
      * @see ClassWriter#getExceptions(Type[], Map)
      */
-    private String getExceptions(@NotNull Type[] exceptions) {
+    private String getExceptions(Type[] exceptions) {
         return getExceptions(exceptions, null);
     }
 
@@ -124,7 +121,7 @@ public class ClassWriter {
      * @param generics map of generic types that should be replaced
      * @return string of exception types separated by comma
      */
-    private String getExceptions(@NotNull Type[] exceptions, @Nullable Map<Type, Type> generics) {
+    private String getExceptions(Type[] exceptions, Map<Type, Type> generics) {
         if (exceptions.length == 0) {
             return "";
         }

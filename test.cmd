@@ -37,6 +37,9 @@ IF "%name%" NEQ "all" (
   	  SET cp=!cp!;%%A
     )
   )
+  IF DEFINED classes (
+    CALL :compile "!cp!" %classes%
+  )
   CALL :test "!cp!" %tester% %name% %package%.%class% %salt%
 ) ELSE (
   ECHO ##### Running all tests #####
@@ -51,6 +54,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/artifacts/WalkTest.jar
   SET tester=info.kgeorgiy.java.advanced.walk.Tester
   SET class=walk.Walk
+  SET classes=src/ru/ifmo/ctddev/makarenko/walk/Walk.java src/ru/ifmo/ctddev/makarenko/walk/Utils.java
   GOTO END_CASE
 :SETTINGS_recursive
 :SETTINGS_recursivewalk
@@ -60,6 +64,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/artifacts/WalkTest.jar
   SET tester=info.kgeorgiy.java.advanced.walk.Tester
   SET class=walk.RecursiveWalk
+  SET classes=src/ru/ifmo/ctddev/makarenko/walk/RecursiveWalk.java src/ru/ifmo/ctddev/makarenko/walk/Utils.java src/ru/ifmo/ctddev/makarenko/walk/HashVisitor.java
   GOTO END_CASE
 :SETTINGS_sorted
 :SETTINGS_sortedset
@@ -69,6 +74,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ArraySetTest.jar
   SET tester=info.kgeorgiy.java.advanced.arrayset.Tester
   SET class=arrayset.ArraySet
+  SET classes=src/ru/ifmo/ctddev/makarenko/arrayset/ArraySet.java
   GOTO END_CASE
 :SETTINGS_navigable
 :SETTINGS_navigableset
@@ -78,6 +84,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ArraySetTest.jar
   SET tester=info.kgeorgiy.java.advanced.arrayset.Tester
   SET class=arrayset.ArraySet
+  SET classes=src/ru/ifmo/ctddev/makarenko/arrayset/ArraySet.java
   GOTO END_CASE
 :SETTINGS_interface
 :SETTINGS_hw3_easy
@@ -86,6 +93,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ImplementorTest.jar
   SET tester=info.kgeorgiy.java.advanced.implementor.Tester
   SET class=implementor.Implementor
+  SET classes=src/ru/ifmo/ctddev/makarenko/implementor/Implementor.java src/ru/ifmo/ctddev/makarenko/implementor/ClassWriter.java
   GOTO END_CASE
 :SETTINGS_class
 :SETTINGS_hw3_hard
@@ -94,6 +102,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ImplementorTest.jar
   SET tester=info.kgeorgiy.java.advanced.implementor.Tester
   SET class=implementor.Implementor
+  SET classes=src/ru/ifmo/ctddev/makarenko/implementor/Implementor.java src/ru/ifmo/ctddev/makarenko/implementor/ClassWriter.java
   GOTO END_CASE
 :SETTINGS_jarinterface
 :SETTINGS_hw4_easy
@@ -102,6 +111,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/JarImplementorTest.jar
   SET tester=info.kgeorgiy.java.advanced.implementor.Tester
   SET class=implementor.Implementor
+  SET classes=src/ru/ifmo/ctddev/makarenko/implementor/Implementor.java src/ru/ifmo/ctddev/makarenko/implementor/ClassWriter.java
   GOTO END_CASE
 :SETTINGS_jarclass
 :SETTINGS_hw4_hard
@@ -110,6 +120,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/JarImplementorTest.jar
   SET tester=info.kgeorgiy.java.advanced.implementor.Tester
   SET class=implementor.Implementor
+  SET classes=src/ru/ifmo/ctddev/makarenko/implementor/Implementor.java src/ru/ifmo/ctddev/makarenko/implementor/ClassWriter.java
   GOTO END_CASE
 :SETTINGS_scalar
 :SETTINGS_hw6_easy
@@ -118,6 +129,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/IterativeParallelismTest.jar
   SET tester=info.kgeorgiy.java.advanced.concurrent.Tester
   SET class=concurrent.IterativeParallelism
+  SET classes=src/ru/ifmo/ctddev/makarenko/concurrent/IterativeParallelism.java
   GOTO END_CASE
 :SETTINGS_list
 :SETTINGS_hw6_hard
@@ -126,6 +138,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/IterativeParallelismTest.jar
   SET tester=info.kgeorgiy.java.advanced.concurrent.Tester
   SET class=concurrent.IterativeParallelism
+  SET classes=src/ru/ifmo/ctddev/makarenko/concurrent/IterativeParallelism.java
   GOTO END_CASE
 :SETTINGS_scalarmap
 :SETTINGS_hw7_easy
@@ -134,6 +147,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ParallelMapperTest.jar
   SET tester=info.kgeorgiy.java.advanced.mapper.Tester
   SET class=mapper.ParallelMapperImpl","ru.ifmo.ctddev.makarenko.mapper.IterativeParallelism
+  SET classes=src/ru/ifmo/ctddev/makarenko/mapper/IterativeParallelism.java src/ru/ifmo/ctddev/makarenko/mapper/ParallelMapperImpl.java
   GOTO END_CASE
 :SETTINGS_listmap
 :SETTINGS_hw7_hard
@@ -142,6 +156,7 @@ REM #############################  Settings  ###############################
   SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/ParallelMapperTest.jar
   SET tester=info.kgeorgiy.java.advanced.mapper.Tester
   SET class=mapper.ParallelMapperImpl","ru.ifmo.ctddev.makarenko.mapper.IterativeParallelism
+  SET classes=src/ru/ifmo/ctddev/makarenko/mapper/IterativeParallelism.java src/ru/ifmo/ctddev/makarenko/mapper/ParallelMapperImpl.java
   GOTO END_CASE
 :SETTINGS_DEFAULT
   SET /P name="Please, enter test name: "
@@ -170,6 +185,15 @@ REM #############################  Settings  ###############################
   VER > NUL
   GOTO :EOF
 
+
+REM Compile function
+REM @param %1 classpath
+REM @param %2-%9 classes
+:compile
+ECHO Compiling: javac -cp %1 -sourcepath ./src -d ./out/production/JavaAdvanced %2
+ECHO/
+javac -cp %1 -sourcepath ./src -d ./out/production/JavaAdvanced %2 %3 %4 %5 %6 %7 %8 %9
+EXIT /B 0
 
 REM Test function
 REM @param %1 classpath
