@@ -14,116 +14,104 @@ public class WebCrawler implements Crawler {
     private final ConcurrentHashMap<String, Integer> connections;
 
     private class CrawlerState {
-        public final ConcurrentLinkedQueue<Future<Document>> downloadTasks;
-        public final ConcurrentLinkedQueue<Future<List<String>>> parseTasks;
-        public final ConcurrentHashMap<String, Future<Document>> downloadCache;
-        public final ConcurrentHashMap<Document, Future<List<String>>> parseCache;
+        public final ConcurrentLinkedQueue<Future<Result>> tasks;
+        public final ConcurrentHashMap<String, Document> downloadCache;
+        public final ConcurrentHashMap<String, List<String>> parseCache;
 
         public CrawlerState() {
-            downloadTasks = new ConcurrentLinkedQueue<>();
-            parseTasks = new ConcurrentLinkedQueue<>();
+            tasks = new ConcurrentLinkedQueue<>();
             downloadCache = new ConcurrentHashMap<>();
             parseCache = new ConcurrentHashMap<>();
         }
     }
 
-    private abstract class CrawlerTask<I, O> implements Callable<O> {
+    private class DownloadTask implements Callable<Result> {
 
-        protected final I data;
+        protected final String url;
         protected final int depth;
         protected final CrawlerState state;
 
-        CrawlerTask(I data, int depth, final CrawlerState state) {
-            this.data = data;
+        DownloadTask(String url, int depth, final CrawlerState state) {
+            this.url = url;
             this.depth = depth;
             this.state = state;
         }
 
-        protected abstract Future<O> getCachedValue(I data);
-
-        protected abstract O getValue(I data) throws IOException;
-
-        protected abstract void delegateTask(O result);
-
         @Override
-        public O call() throws Exception {
-            if (limitExceeded(data)) {
-                return null;
+        public Result call() {
+            final List<String> downloaded = new ArrayList<>();
+            final Map<String, IOException> errors = new HashMap<>();
+
+            Document cached = state.downloadCache.get(url);
+            if (cached != null) {
+                // Do nothing
+            } else if (connections.getOrDefault(url, 0) >= perHost) {
+                state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
+            } else {
+                try {
+                    Document document = getValue(downloaded);
+                    if (depth > 1) {
+                        Callable<Result> extractTask = new ExtractTask(url, document, depth, state);
+                        state.tasks.add(extractorsPool.submit(extractTask));
+                    }
+                } catch (IOException e) {
+                    errors.put(url, e);
+                }
             }
-            Future<O> cached = getCachedValue(data);
-            O result = cached != null && cached.isDone()
-                    ? cached.get()
-                    : getValue(data);
-            if (depth > 1) {
-                delegateTask(result);
-            }
-            return result;
+            return new Result(downloaded, errors);
         }
 
-        protected abstract boolean limitExceeded(I data);
-    }
-
-    private class DownloadTask extends CrawlerTask<String, Document> {
-        DownloadTask(String url, int depth, final CrawlerState state) {
-            super(URLUtils.removeFragment(url), depth, state);
-        }
-
-        @Override
-        protected Future<Document> getCachedValue(String data) {
-            return state.downloadCache.get(data);
-        }
-
-        @Override
-        protected Document getValue(String data) throws IOException {
-            connections.put(data, connections.getOrDefault(data, 0) + 1);
-            Document doc = downloader.download(data);
-            connections.put(data, connections.getOrDefault(data, 0) - 1);
+        private Document getValue(final List<String> downloaded) throws IOException {
+            connections.compute(url, (key, value) -> value == null ? 0 : value + 1);
+            Document doc = downloader.download(url);
+            connections.compute(url, (key, value) -> value == null || value == 0 ? 0 : value - 1);
+            state.downloadCache.put(url, doc);
+            // downloaded.add(url);
             return doc;
         }
-
-        @Override
-        protected void delegateTask(Document result) {
-            Callable<List<String>> extractTask = new ExtractTask(result, depth, state);
-            state.parseTasks.add(extractorsPool.submit(extractTask));
-        }
-
-        @Override
-        protected boolean limitExceeded(String data) {
-            if (connections.getOrDefault(data, 0) >= perHost) {
-                Callable<Document> downloadTask = new DownloadTask(data, depth, state);
-                state.downloadTasks.add(downloadersPool.submit(downloadTask));
-                return true;
-            }
-            return false;
-        }
     }
 
-    private class ExtractTask extends CrawlerTask<Document, List<String>> {
-        ExtractTask(Document document, int depth, final CrawlerState state) {
-            super(document, depth, state);
+    private class ExtractTask implements Callable<Result> {
+
+        protected final String url;
+        protected final Document document;
+        protected final int depth;
+        protected final CrawlerState state;
+
+        ExtractTask(String url, Document document, int depth, final CrawlerState state) {
+            this.url = URLUtils.removeFragment(url);
+            this.document = document;
+            this.depth = depth;
+            this.state = state;
         }
 
         @Override
-        protected Future<List<String>> getCachedValue(Document data) {
-            return state.parseCache.get(data);
-        }
+        public Result call() throws Exception {
+            final List<String> downloaded = new ArrayList<>();
+            final Map<String, IOException> errors = new HashMap<>();
 
-        @Override
-        protected List<String> getValue(Document data) throws IOException {
-            return data.extractLinks();
-        }
-
-        @Override
-        protected void delegateTask(List<String> result) {
-            for (String link : result) {
-                Callable<Document> downloadTask = new DownloadTask(link, depth - 1, state);
-                state.downloadTasks.add(downloadersPool.submit(downloadTask));
+            try {
+                List<String> result = getValue();
+                if (depth > 1) {
+                    for (String link : result) {
+                        Callable<Result> downloadTask = new DownloadTask(link, depth - 1, state);
+                        state.tasks.add(downloadersPool.submit(downloadTask));
+                    }
+                }
+            } catch (IOException e) {
+                errors.put(url, e);
             }
+            return new Result(downloaded, errors);
         }
 
-        @Override
-        protected boolean limitExceeded(Document data) {
-            return false;
+        private List<String> getValue() throws IOException {
+            List<String> list = state.parseCache.get(url);
+            if (list != null) {
+                return list;
+            }
+            list = document.extractLinks();
+            state.parseCache.put(url, list);
+            return list;
         }
     }
 
@@ -151,44 +139,27 @@ public class WebCrawler implements Crawler {
      */
     @Override
     public Result download(String url, int depth) {
-        System.out.println("Downloading website " + url + " with depth = " + depth);
-
         CrawlerState state = new CrawlerState();
+        Future<Result> root = downloadersPool.submit(new DownloadTask(url, depth, state));
+        state.tasks.add(root);
 
-        Callable<Document> task = new DownloadTask(url, depth, state);
-        state.downloadTasks.add(downloadersPool.submit(task));
-
-        List<String> result = new ArrayList<>();
+        List<String> downloaded = new ArrayList<>();
         Map<String, IOException> errors = new HashMap<>();
 
-        while (!state.downloadTasks.isEmpty() || !state.parseTasks.isEmpty()) {
-            while (!state.downloadTasks.isEmpty()) {
-                Future<Document> document = state.downloadTasks.poll();
-                while (document != null && !document.isDone() && !document.isCancelled()) {
-                    try {
-                        document.get();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
+        while (!state.tasks.isEmpty()) {
+            Future<Result> task = state.tasks.poll();
+            do {
+                try {
+                    Result result = task.get();
+                    downloaded.addAll(result.getDownloaded());
+                    errors.putAll(result.getErrors());
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
                 }
-            }
-            while (!state.parseTasks.isEmpty()) {
-                Future<List<String>> list = state.parseTasks.poll();
-                while (list != null && !list.isDone() && !list.isCancelled()) {
-                    try {
-                        result.addAll(list.get());
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+            } while (!task.isDone() && !task.isCancelled());
         }
 
-        return new Result(result, errors);
+        return new Result(downloaded, errors);
     }
 
     @Override
@@ -196,8 +167,12 @@ public class WebCrawler implements Crawler {
         downloadersPool.shutdown();
         extractorsPool.shutdown();
         try {
-            downloadersPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-            extractorsPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+            if (!downloadersPool.awaitTermination(30, TimeUnit.SECONDS)) {
+                System.err.println("Downloader threads were not terminated properly");
+            }
+            if (!extractorsPool.awaitTermination(30, TimeUnit.SECONDS)) {
+                System.err.println("Link extractor threads were not terminated properly");
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -214,7 +189,7 @@ public class WebCrawler implements Crawler {
         final String url = args[0];
         int downloaders = defaultPoolSize;
         int extractors = defaultPoolSize;
-        int perHost = 3;
+        int perHost = 100;
 
         try {
             if (args.length > 3) {
@@ -234,7 +209,7 @@ public class WebCrawler implements Crawler {
 
         try (Crawler crawler = new WebCrawler(new CachingDownloader(), downloaders, extractors, perHost)) {
             System.out.println("WebCrawler initialized");
-            Result result = crawler.download(url, 2);
+            Result result = crawler.download(url, 3);
             for (String link : result.getDownloaded()) {
                 System.out.println("OK: " + link);
             }
