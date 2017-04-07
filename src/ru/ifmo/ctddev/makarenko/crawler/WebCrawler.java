@@ -3,6 +3,7 @@ package ru.ifmo.ctddev.makarenko.crawler;
 import info.kgeorgiy.java.advanced.crawler.*;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -11,30 +12,35 @@ public class WebCrawler implements Crawler {
     private final int perHost;
     private final ExecutorService downloadersPool, extractorsPool;
     private final Downloader downloader;
-    private final ConcurrentHashMap<String, Integer> connections;
+    private final ConcurrentMap<String, Integer> connections;
 
     private class CrawlerState {
-        public final ConcurrentLinkedQueue<Future<Result>> tasks;
-        public final ConcurrentHashMap<String, Document> downloadCache;
-        public final ConcurrentHashMap<String, List<String>> parseCache;
+        final ConcurrentLinkedQueue<Future<Result>> tasks;
+        final ConcurrentSkipListSet<String> started;
 
-        public CrawlerState() {
+        CrawlerState() {
             tasks = new ConcurrentLinkedQueue<>();
-            downloadCache = new ConcurrentHashMap<>();
-            parseCache = new ConcurrentHashMap<>();
+            started = new ConcurrentSkipListSet<>();
         }
     }
 
     private class DownloadTask implements Callable<Result> {
 
-        protected final String url;
-        protected final int depth;
-        protected final CrawlerState state;
+        private final String url, host;
+        private final int depth;
+        private final CrawlerState state;
 
         DownloadTask(String url, int depth, final CrawlerState state) {
-            this.url = url;
+            this.url = URLUtils.removeFragment(url);
             this.depth = depth;
             this.state = state;
+            String host;
+            try {
+                host = URLUtils.getHost(url);
+            } catch (MalformedURLException e) {
+                host = url;
+            }
+            this.host = host;
         }
 
         @Override
@@ -42,14 +48,14 @@ public class WebCrawler implements Crawler {
             final List<String> downloaded = new ArrayList<>();
             final Map<String, IOException> errors = new HashMap<>();
 
-            Document cached = state.downloadCache.get(url);
-            if (cached != null) {
-                // Do nothing
-            } else if (connections.getOrDefault(url, 0) >= perHost) {
+            if (connections.getOrDefault(host, 0) > perHost) {
                 state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
-            } else {
+            } else if (state.started.add(url)) {
                 try {
-                    Document document = getValue(downloaded);
+                    connections.compute(host, (key, value) -> value == null ? 1 : value + 1);
+                    Document document = downloader.download(url);
+                    connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
+                    downloaded.add(url);
                     if (depth > 1) {
                         Callable<Result> extractTask = new ExtractTask(url, document, depth, state);
                         state.tasks.add(extractorsPool.submit(extractTask));
@@ -59,15 +65,6 @@ public class WebCrawler implements Crawler {
                 }
             }
             return new Result(downloaded, errors);
-        }
-
-        private Document getValue(final List<String> downloaded) throws IOException {
-            connections.compute(url, (key, value) -> value == null ? 0 : value + 1);
-            Document doc = downloader.download(url);
-            connections.compute(url, (key, value) -> value == null || value == 0 ? 0 : value - 1);
-            state.downloadCache.put(url, doc);
-            // downloaded.add(url);
-            return doc;
         }
     }
 
@@ -79,7 +76,7 @@ public class WebCrawler implements Crawler {
         protected final CrawlerState state;
 
         ExtractTask(String url, Document document, int depth, final CrawlerState state) {
-            this.url = URLUtils.removeFragment(url);
+            this.url = url;
             this.document = document;
             this.depth = depth;
             this.state = state;
@@ -91,9 +88,9 @@ public class WebCrawler implements Crawler {
             final Map<String, IOException> errors = new HashMap<>();
 
             try {
-                List<String> result = getValue();
-                if (depth > 1) {
-                    for (String link : result) {
+                List<String> result = document.extractLinks();
+                for (String link : result) {
+                    if (!state.started.contains(URLUtils.removeFragment(link))) {
                         Callable<Result> downloadTask = new DownloadTask(link, depth - 1, state);
                         state.tasks.add(downloadersPool.submit(downloadTask));
                     }
@@ -102,16 +99,6 @@ public class WebCrawler implements Crawler {
                 errors.put(url, e);
             }
             return new Result(downloaded, errors);
-        }
-
-        private List<String> getValue() throws IOException {
-            List<String> list = state.parseCache.get(url);
-            if (list != null) {
-                return list;
-            }
-            list = document.extractLinks();
-            state.parseCache.put(url, list);
-            return list;
         }
     }
 
@@ -123,20 +110,6 @@ public class WebCrawler implements Crawler {
         this.connections = new ConcurrentHashMap<>();
     }
 
-    /**
-     * Метод download должен рекурсивно обходить страницы, начиная
-     * с указанного URL на указанную глубину и возвращать список
-     * загруженных страниц и файлов. Например, если глубина равна 1,
-     * то должна быть загружена только указанная страница.
-     * Если глубина равна 2, то указанная страница и те страницы и файлы,
-     * на которые она ссылается и так далее. Загрузка и обработка страниц
-     * (извлечение ссылок) должна выполняться максимально параллельно,
-     * с учетом ограничений на число одновременно загружаемых страниц
-     * (в том числе с одного хоста) и страниц, с которых загружаются ссылки.
-     * Для распараллеливания разрешается создать до downloaders + extractors
-     * вспомогательных потоков. Загружать и/или извлекать ссылки из одной
-     * и той же страницы запрещается.
-     */
     @Override
     public Result download(String url, int depth) {
         CrawlerState state = new CrawlerState();
@@ -153,9 +126,7 @@ public class WebCrawler implements Crawler {
                     Result result = task.get();
                     downloaded.addAll(result.getDownloaded());
                     errors.putAll(result.getErrors());
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
+                } catch (InterruptedException | ExecutionException ignored) {}
             } while (!task.isDone() && !task.isCancelled());
         }
 
@@ -166,15 +137,17 @@ public class WebCrawler implements Crawler {
     public void close() {
         downloadersPool.shutdown();
         extractorsPool.shutdown();
+        terminate(downloadersPool);
+        terminate(extractorsPool);
+    }
+
+    private void terminate(ExecutorService service) {
         try {
-            if (!downloadersPool.awaitTermination(30, TimeUnit.SECONDS)) {
-                System.err.println("Downloader threads were not terminated properly");
-            }
-            if (!extractorsPool.awaitTermination(30, TimeUnit.SECONDS)) {
-                System.err.println("Link extractor threads were not terminated properly");
+            if (!service.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.err.println("Executor threads were not terminated in time");
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            service.shutdownNow();
         }
     }
 
@@ -189,7 +162,7 @@ public class WebCrawler implements Crawler {
         final String url = args[0];
         int downloaders = defaultPoolSize;
         int extractors = defaultPoolSize;
-        int perHost = 100;
+        int perHost = 5;
 
         try {
             if (args.length > 3) {
@@ -208,8 +181,7 @@ public class WebCrawler implements Crawler {
         }
 
         try (Crawler crawler = new WebCrawler(new CachingDownloader(), downloaders, extractors, perHost)) {
-            System.out.println("WebCrawler initialized");
-            Result result = crawler.download(url, 3);
+            Result result = crawler.download(url, 2);
             for (String link : result.getDownloaded()) {
                 System.out.println("OK: " + link);
             }
