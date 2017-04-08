@@ -16,11 +16,11 @@ public class WebCrawler implements Crawler {
 
     private class CrawlerState {
         final ConcurrentLinkedQueue<Future<Result>> tasks;
-        final ConcurrentSkipListSet<String> started;
+        final ConcurrentSkipListSet<String> unique;
 
         CrawlerState() {
             tasks = new ConcurrentLinkedQueue<>();
-            started = new ConcurrentSkipListSet<>();
+            unique = new ConcurrentSkipListSet<>();
         }
     }
 
@@ -31,7 +31,7 @@ public class WebCrawler implements Crawler {
         private final CrawlerState state;
 
         DownloadTask(String url, int depth, final CrawlerState state) {
-            this.url = URLUtils.removeFragment(url);
+            this.url = url;
             this.depth = depth;
             this.state = state;
             String host;
@@ -48,11 +48,12 @@ public class WebCrawler implements Crawler {
             final List<String> downloaded = new ArrayList<>();
             final Map<String, IOException> errors = new HashMap<>();
 
-            if (connections.getOrDefault(host, 0) > perHost) {
+            int threads = connections.compute(host, (key, value) -> value == null ? 1 : value + 1);
+            if (threads > perHost) {
+                connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
                 state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
-            } else if (state.started.add(url)) {
+            } else {
                 try {
-                    connections.compute(host, (key, value) -> value == null ? 1 : value + 1);
                     Document document = downloader.download(url);
                     connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
                     downloaded.add(url);
@@ -70,10 +71,10 @@ public class WebCrawler implements Crawler {
 
     private class ExtractTask implements Callable<Result> {
 
-        protected final String url;
-        protected final Document document;
-        protected final int depth;
-        protected final CrawlerState state;
+        final String url;
+        final Document document;
+        final int depth;
+        final CrawlerState state;
 
         ExtractTask(String url, Document document, int depth, final CrawlerState state) {
             this.url = url;
@@ -90,7 +91,8 @@ public class WebCrawler implements Crawler {
             try {
                 List<String> result = document.extractLinks();
                 for (String link : result) {
-                    if (!state.started.contains(URLUtils.removeFragment(link))) {
+                    link = URLUtils.removeFragment(link);
+                    if (state.unique.add(link)) {
                         Callable<Result> downloadTask = new DownloadTask(link, depth - 1, state);
                         state.tasks.add(downloadersPool.submit(downloadTask));
                     }
@@ -112,9 +114,13 @@ public class WebCrawler implements Crawler {
 
     @Override
     public Result download(String url, int depth) {
+        url = URLUtils.removeFragment(url);
+
         CrawlerState state = new CrawlerState();
-        Future<Result> root = downloadersPool.submit(new DownloadTask(url, depth, state));
-        state.tasks.add(root);
+        state.unique.add(url);
+
+        Callable<Result> downloadTask = new DownloadTask(url, depth, state);
+        state.tasks.add(downloadersPool.submit(downloadTask));
 
         List<String> downloaded = new ArrayList<>();
         Map<String, IOException> errors = new HashMap<>();
@@ -126,7 +132,8 @@ public class WebCrawler implements Crawler {
                     Result result = task.get();
                     downloaded.addAll(result.getDownloaded());
                     errors.putAll(result.getErrors());
-                } catch (InterruptedException | ExecutionException ignored) {}
+                } catch (InterruptedException | ExecutionException ignored) {
+                }
             } while (!task.isDone() && !task.isCancelled());
         }
 
@@ -162,7 +169,7 @@ public class WebCrawler implements Crawler {
         final String url = args[0];
         int downloaders = defaultPoolSize;
         int extractors = defaultPoolSize;
-        int perHost = 5;
+        int perHost = 3;
 
         try {
             if (args.length > 3) {
