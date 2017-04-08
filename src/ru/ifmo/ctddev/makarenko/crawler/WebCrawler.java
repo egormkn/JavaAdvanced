@@ -62,6 +62,7 @@ public class WebCrawler implements Crawler {
                         state.tasks.add(extractorsPool.submit(extractTask));
                     }
                 } catch (IOException e) {
+                    connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
                     errors.put(url, e);
                 }
             }
