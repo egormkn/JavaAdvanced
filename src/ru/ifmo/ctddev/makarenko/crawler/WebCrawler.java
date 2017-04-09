@@ -16,11 +16,11 @@ public class WebCrawler implements Crawler {
 
     private class CrawlerState {
         final ConcurrentLinkedQueue<Future<Result>> tasks;
-        final ConcurrentSkipListSet<String> unique;
+        final ConcurrentHashMap<String, Boolean> unique;
 
         CrawlerState() {
             tasks = new ConcurrentLinkedQueue<>();
-            unique = new ConcurrentSkipListSet<>();
+            unique = new ConcurrentHashMap<>();
         }
     }
 
@@ -48,23 +48,29 @@ public class WebCrawler implements Crawler {
             final List<String> downloaded = new ArrayList<>();
             final Map<String, IOException> errors = new HashMap<>();
 
-            int threads = connections.compute(host, (key, value) -> value == null ? 1 : value + 1);
-            if (threads > perHost) {
-                connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
-                state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
-            } else {
+            int threads = connections.compute(host, (key, value) -> {
+                if (value == null) {
+                    return 1;
+                }
+                int absValue = Math.abs(value);
+                return absValue == perHost ? -absValue : absValue + 1;
+            });
+
+            if (threads > 0) {
                 try {
                     Document document = downloader.download(url);
-                    connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
+                    connections.compute(host, (key, value) -> Math.abs(value) - 1);
                     downloaded.add(url);
                     if (depth > 1) {
                         Callable<Result> extractTask = new ExtractTask(url, document, depth, state);
                         state.tasks.add(extractorsPool.submit(extractTask));
                     }
                 } catch (IOException e) {
-                    connections.compute(host, (key, value) -> value == null || value == 0 ? 0 : value - 1);
+                    connections.compute(host, (key, value) -> Math.abs(value) - 1);
                     errors.put(url, e);
                 }
+            } else {
+                state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
             }
             return new Result(downloaded, errors);
         }
@@ -85,7 +91,7 @@ public class WebCrawler implements Crawler {
         }
 
         @Override
-        public Result call() throws Exception {
+        public Result call() {
             final List<String> downloaded = new ArrayList<>();
             final Map<String, IOException> errors = new HashMap<>();
 
@@ -93,7 +99,7 @@ public class WebCrawler implements Crawler {
                 List<String> result = document.extractLinks();
                 for (String link : result) {
                     link = URLUtils.removeFragment(link);
-                    if (state.unique.add(link)) {
+                    if (depth > 1 && state.unique.put(link, true) == null) {
                         Callable<Result> downloadTask = new DownloadTask(link, depth - 1, state);
                         state.tasks.add(downloadersPool.submit(downloadTask));
                     }
@@ -105,20 +111,12 @@ public class WebCrawler implements Crawler {
         }
     }
 
-    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
-        this.downloader = downloader;
-        this.downloadersPool = Executors.newFixedThreadPool(downloaders);
-        this.extractorsPool = Executors.newFixedThreadPool(extractors);
-        this.perHost = perHost;
-        this.connections = new ConcurrentHashMap<>();
-    }
-
     @Override
     public Result download(String url, int depth) {
         url = URLUtils.removeFragment(url);
 
         CrawlerState state = new CrawlerState();
-        state.unique.add(url);
+        state.unique.put(url, true);
 
         Callable<Result> downloadTask = new DownloadTask(url, depth, state);
         state.tasks.add(downloadersPool.submit(downloadTask));
@@ -141,21 +139,35 @@ public class WebCrawler implements Crawler {
         return new Result(downloaded, errors);
     }
 
+    public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
+        this.downloader = downloader;
+        this.downloadersPool = Executors.newFixedThreadPool(Math.min(downloaders, 100));
+        this.extractorsPool = Executors.newFixedThreadPool(Math.min(extractors, 100));
+        System.out.println("D: " + downloaders + ", E: " + extractors);
+        this.perHost = perHost;
+        this.connections = new ConcurrentHashMap<>();
+    }
+
     @Override
     public void close() {
         downloadersPool.shutdown();
         extractorsPool.shutdown();
-        terminate(downloadersPool);
-        terminate(extractorsPool);
+        shutdownAndAwaitTermination(downloadersPool);
+        shutdownAndAwaitTermination(extractorsPool);
     }
 
-    private void terminate(ExecutorService service) {
+    // https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ExecutorService.html
+    private void shutdownAndAwaitTermination(ExecutorService pool) {
         try {
-            if (!service.awaitTermination(5, TimeUnit.SECONDS)) {
-                System.err.println("Executor threads were not terminated in time");
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+                if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+                    System.err.println("Thread pool did not terminate in time");
+                }
             }
-        } catch (InterruptedException e) {
-            service.shutdownNow();
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 
