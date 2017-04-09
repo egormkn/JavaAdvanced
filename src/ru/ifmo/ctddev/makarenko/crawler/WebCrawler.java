@@ -16,10 +16,12 @@ public class WebCrawler implements Crawler {
 
     private class CrawlerState {
         final ConcurrentLinkedQueue<Future<Result>> tasks;
+        final ConcurrentLinkedQueue<Callable<Result>> delayedTasks;
         final ConcurrentHashMap<String, Boolean> unique;
 
         CrawlerState() {
             tasks = new ConcurrentLinkedQueue<>();
+            delayedTasks = new ConcurrentLinkedQueue<>();
             unique = new ConcurrentHashMap<>();
         }
     }
@@ -56,7 +58,9 @@ public class WebCrawler implements Crawler {
                 return absValue == perHost ? -absValue : absValue + 1;
             });
 
-            if (threads > 0) {
+            if (threads == -perHost) { // Too many connections
+                state.delayedTasks.add(new DownloadTask(url, depth, state));
+            } else {
                 try {
                     Document document = downloader.download(url);
                     connections.compute(host, (key, value) -> Math.abs(value) - 1);
@@ -69,8 +73,6 @@ public class WebCrawler implements Crawler {
                     connections.compute(host, (key, value) -> Math.abs(value) - 1);
                     errors.put(url, e);
                 }
-            } else {
-                state.tasks.add(downloadersPool.submit(new DownloadTask(url, depth, state)));
             }
             return new Result(downloaded, errors);
         }
@@ -134,6 +136,9 @@ public class WebCrawler implements Crawler {
                 } catch (InterruptedException | ExecutionException ignored) {
                 }
             } while (!task.isDone() && !task.isCancelled());
+            while (!state.delayedTasks.isEmpty()) {
+                state.tasks.add(downloadersPool.submit(state.delayedTasks.poll()));
+            }
         }
 
         return new Result(downloaded, errors);
@@ -141,9 +146,8 @@ public class WebCrawler implements Crawler {
 
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         this.downloader = downloader;
-        this.downloadersPool = Executors.newFixedThreadPool(Math.min(downloaders, 100));
-        this.extractorsPool = Executors.newFixedThreadPool(Math.min(extractors, 100));
-        System.out.println("D: " + downloaders + ", E: " + extractors);
+        this.downloadersPool = Executors.newFixedThreadPool(Math.min(downloaders, 50));
+        this.extractorsPool = Executors.newFixedThreadPool(Math.min(extractors, 50));
         this.perHost = perHost;
         this.connections = new ConcurrentHashMap<>();
     }
@@ -154,6 +158,7 @@ public class WebCrawler implements Crawler {
         extractorsPool.shutdown();
         shutdownAndAwaitTermination(downloadersPool);
         shutdownAndAwaitTermination(extractorsPool);
+        System.out.println("Threads: " + ((ThreadPoolExecutor) downloadersPool).getLargestPoolSize());
     }
 
     // https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ExecutorService.html
