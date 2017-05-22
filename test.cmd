@@ -41,6 +41,7 @@ IF "%name%" NEQ "all" (
     CALL :compile "!cp!" %classes%
   )
   CALL :test "!cp!" %tester% %name% %package%.%class% %salt%
+  SET cp=
 ) ELSE (
   ECHO ##### Running all tests #####
 )
@@ -158,6 +159,42 @@ REM #############################  Settings  ###############################
   SET class=mapper.ParallelMapperImpl","ru.ifmo.ctddev.makarenko.mapper.IterativeParallelism
   SET classes=src/ru/ifmo/ctddev/makarenko/mapper/IterativeParallelism.java src/ru/ifmo/ctddev/makarenko/mapper/ParallelMapperImpl.java
   GOTO END_CASE
+:SETTINGS_crawler
+:SETTINGS_hw8_easy
+:SETTINGS_8_easy
+  SET name=easy
+  SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/WebCrawlerTest.jar
+  SET tester=info.kgeorgiy.java.advanced.crawler.Tester
+  SET class=crawler.WebCrawler
+  SET classes=src/ru/ifmo/ctddev/makarenko/crawler/WebCrawler.java
+  GOTO END_CASE
+:SETTINGS_crawler_hard
+:SETTINGS_hw8_hard
+:SETTINGS_8_hard
+  SET name=hard
+  SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/artifacts/WebCrawlerTest.jar
+  SET tester=info.kgeorgiy.java.advanced.crawler.Tester
+  SET class=crawler.WebCrawler
+  SET classes=src/ru/ifmo/ctddev/makarenko/crawler/WebCrawler.java
+  GOTO END_CASE
+:SETTINGS_client
+:SETTINGS_hw9_client
+:SETTINGS_9_client
+  SET name=client
+  SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/lib/jsoup-1.8.1.jar tests/artifacts/HelloUDPTest.jar
+  SET tester=info.kgeorgiy.java.advanced.hello.Tester
+  SET class=hello.HelloUDPClient
+  SET classes=src/ru/ifmo/ctddev/makarenko/hello/HelloUDPClient.java
+  GOTO END_CASE
+:SETTINGS_server
+:SETTINGS_hw9_server
+:SETTINGS_9_server
+  SET name=server
+  SET classpath=%classpath% tests/lib/quickcheck-0.6.jar tests/lib/jsoup-1.8.1.jar tests/artifacts/HelloUDPTest.jar
+  SET tester=info.kgeorgiy.java.advanced.hello.Tester
+  SET class=hello.HelloUDPServer
+  SET classes=src/ru/ifmo/ctddev/makarenko/hello/HelloUDPServer.java
+  GOTO END_CASE
 :SETTINGS_DEFAULT
   SET /P name="Please, enter test name: "
   2>NUL GOTO SETTINGS_%name% || GOTO SETTINGS_DEFAULT
@@ -179,6 +216,12 @@ REM #############################  Settings  ###############################
   
   CALL :main scalarmap %salt%
   CALL :main listmap %salt%
+
+  CALL :main crawler %salt%
+  CALL :main crawler_hard %salt%
+
+  CALL :main client %salt%
+  CALL :main server %salt%
   
   GOTO END_CASE
 :END_CASE
@@ -192,7 +235,7 @@ REM @param %2-%9 classes
 :compile
 ECHO Compiling: javac -cp %1 -sourcepath ./src -d ./out/production/JavaAdvanced %2
 ECHO/
-javac -cp %1 -sourcepath ./src -d ./out/production/JavaAdvanced %2 %3 %4 %5 %6 %7 %8 %9
+javac -encoding utf8 -cp %1 -sourcepath ./src -d ./out/production/JavaAdvanced %2 %3 %4 %5 %6 %7 %8 %9
 EXIT /B 0
 
 REM Test function

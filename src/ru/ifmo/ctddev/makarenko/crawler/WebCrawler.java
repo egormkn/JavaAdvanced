@@ -146,8 +146,8 @@ public class WebCrawler implements Crawler {
 
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         this.downloader = downloader;
-        this.downloadersPool = Executors.newFixedThreadPool(Math.min(downloaders, 50));
-        this.extractorsPool = Executors.newFixedThreadPool(Math.min(extractors, 50));
+        this.downloadersPool = Executors.newFixedThreadPool(downloaders);
+        this.extractorsPool = Executors.newFixedThreadPool(extractors);
         this.perHost = perHost;
         this.connections = new ConcurrentHashMap<>();
     }
