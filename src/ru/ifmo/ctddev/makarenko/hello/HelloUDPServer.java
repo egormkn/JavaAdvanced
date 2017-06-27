@@ -89,17 +89,6 @@ public class HelloUDPServer implements HelloServer {
     @Override
     public void close() {
         datagramSocket.close();
-        try {
-            if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
-                executorService.shutdownNow();
-                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
-                    System.err.println("Thread pool did not terminate in time");
-                }
-            }
-        } catch (InterruptedException ie) {
-            executorService.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
-        //executorService.shutdownNow();
+        executorService.shutdownNow();
     }
 }

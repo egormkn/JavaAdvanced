@@ -3,10 +3,10 @@ package examples.rmi;
 import java.rmi.*;
 
 public interface Bank extends Remote {
-    // –°–æ–∑–¥–∞–µ—Ç —Å—á–µ—Ç
+    // ëÆß§†•‚ ·Á•‚
     public Account createAccount(String id) 
         throws RemoteException;
-    // –í–æ–∑–≤—Ä–∞—â–∞–µ—Ç —Å—á–µ—Ç
+    // ÇÆß¢‡†È†•‚ ·Á•‚
     public Account getAccount(String id) 
         throws RemoteException;
 }

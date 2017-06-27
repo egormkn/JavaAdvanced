@@ -12,7 +12,7 @@ public class BankImpl implements Bank {
         this.port = port;
     }
 
-    // –°–æ–∑–¥–∞–µ—Ç —Å—á–µ—Ç
+    // ëÆß§†•‚ ·Á•‚
     public Account createAccount(String id) throws RemoteException {
         Account account = new AccountImpl(id);
         accounts.put(id, account);
@@ -20,7 +20,7 @@ public class BankImpl implements Bank {
         return account;
     }
 
-    // –í–æ–∑–≤—Ä–∞—â–∞–µ—Ç —Å—á–µ—Ç
+    // ÇÆß¢‡†È†•‚ ·Á•‚
     public Account getAccount(String id) {
         return accounts.get(id);
     }

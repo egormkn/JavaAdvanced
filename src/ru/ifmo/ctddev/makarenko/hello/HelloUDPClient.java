@@ -88,11 +88,11 @@ public class HelloUDPClient implements HelloClient {
     /**
      * Start HelloUDPClient with specified parameters
      *
-     * @param host host to which requests will be sent
-     * @param port port to which requests will be sent
-     * @param prefix request prefix
+     * @param host     host to which requests will be sent
+     * @param port     port to which requests will be sent
+     * @param prefix   request prefix
      * @param requests number of requests
-     * @param threads maximum number of threads
+     * @param threads  maximum number of threads
      */
     @Override
     public void run(String host, int port, String prefix, int requests, int threads) {
@@ -108,8 +108,7 @@ public class HelloUDPClient implements HelloClient {
                 tasks.poll().get();
             }
             executorService.shutdownNow();
-        } catch (UnknownHostException | InterruptedException | ExecutionException | SecurityException e) {
-            //e.printStackTrace();
+        } catch (UnknownHostException | InterruptedException | ExecutionException | SecurityException ignored) {
         }
     }
 }

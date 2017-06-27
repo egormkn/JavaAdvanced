@@ -3,15 +3,15 @@ package examples.rmi;
 import java.rmi.*;
 
 public interface Account extends Remote {
-    // –£–∑–Ω–∞—Ç—å –∏–¥–µ–Ω—Ç–∏—Ñ–∏–∫–∞—Ç–æ—Ä
+    // ìß≠†‚Ï ®§•≠‚®‰®™†‚Æ‡
     public String getId() 
         throws RemoteException;
 
-    // –£–∑–Ω–∞—Ç—å –∫–æ–ª–∏—á–µ—Å—Ç–≤–æ –¥–µ–Ω–µ–≥
+    // ìß≠†‚Ï ™Æ´®Á•·‚¢Æ §•≠•£
     public int getAmount() 
         throws RemoteException;
 
-    // –£—Å—Ç–∞–Ω–æ–≤–∏—Ç—å –∫–æ–ª–∏—á–µ—Å—Ç–≤–æ –¥–µ–Ω–µ–≥
+    // ì·‚†≠Æ¢®‚Ï ™Æ´®Á•·‚¢Æ §•≠•£
     public void setAmount(int amount) 
         throws RemoteException;
 }
